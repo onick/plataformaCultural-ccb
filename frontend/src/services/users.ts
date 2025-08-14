@@ -119,21 +119,32 @@ class UsersService {
     if (params?.location) queryParams.append('location', params.location);
     if (params?.is_admin !== undefined) queryParams.append('is_admin', params.is_admin.toString());
     
-    const response = await fetch(`${API_BASE_URL}/api/users?${queryParams}`, {
+    const response = await fetch(`${API_BASE_URL}/api/admin/users?${queryParams}`, {
       headers: this.getAuthHeaders(),
     });
     
-    const rawResult = await this.handleResponse<PaginatedResponse<User>>(response);
+    const rawResult = await this.handleResponse<any>(response);
     
-    console.log('✅ Users API: Users retrieved:', rawResult.total);
-    return rawResult;
+    // Transform backend response to expected frontend format
+    const result: PaginatedResponse<User> = {
+      items: rawResult.users || [],
+      total: rawResult.total || 0,
+      page: rawResult.page || 1,
+      page_size: params?.limit || 20,
+      total_pages: rawResult.pages || 1,
+      has_next: rawResult.page < rawResult.pages,
+      has_previous: rawResult.page > 1,
+    };
+    
+    console.log('✅ Users API: Users retrieved:', result.total);
+    return result;
   }
 
   // Get user by ID
   async getUser(userId: string): Promise<User> {
     console.log('🔄 Users API: Getting user...', userId);
     
-    const response = await fetch(`${API_BASE_URL}/api/users/${userId}`, {
+    const response = await fetch(`${API_BASE_URL}/api/admin/users/${userId}`, {
       headers: this.getAuthHeaders(),
     });
     
@@ -161,7 +172,7 @@ class UsersService {
   async updateUser(userId: string, updateData: UserUpdate): Promise<User> {
     console.log('🔄 Users API: Updating user...', userId);
     
-    const response = await fetch(`${API_BASE_URL}/api/users/${userId}`, {
+    const response = await fetch(`${API_BASE_URL}/api/admin/users/${userId}`, {
       method: 'PUT',
       headers: this.getAuthHeaders(),
       body: JSON.stringify(updateData),
@@ -176,7 +187,7 @@ class UsersService {
   async deleteUser(userId: string): Promise<void> {
     console.log('🔄 Users API: Deleting user...', userId);
     
-    const response = await fetch(`${API_BASE_URL}/api/users/${userId}`, {
+    const response = await fetch(`${API_BASE_URL}/api/admin/users/${userId}`, {
       method: 'DELETE',
       headers: this.getAuthHeaders(),
     });
@@ -194,7 +205,7 @@ class UsersService {
   async bulkUserAction(actionData: BulkUserAction): Promise<{modified_count: number}> {
     console.log('🔄 Users API: Performing bulk user action...', actionData.action);
     
-    const response = await fetch(`${API_BASE_URL}/api/users/bulk-action`, {
+    const response = await fetch(`${API_BASE_URL}/api/admin/users/bulk-action`, {
       method: 'POST',
       headers: this.getAuthHeaders(),
       body: JSON.stringify(actionData),
@@ -209,7 +220,7 @@ class UsersService {
   async getUserStats(): Promise<UserStats> {
     console.log('🔄 Users API: Getting user statistics...');
     
-    const response = await fetch(`${API_BASE_URL}/api/users/stats/overview`, {
+    const response = await fetch(`${API_BASE_URL}/api/admin/users-metrics`, {
       headers: this.getAuthHeaders(),
     });
     
@@ -226,7 +237,7 @@ class UsersService {
     formData.append('file', file);
     
     const token = localStorage.getItem('auth_token');
-    const response = await fetch(`${API_BASE_URL}/api/users/import`, {
+    const response = await fetch(`${API_BASE_URL}/api/admin/users/bulk-import`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,
